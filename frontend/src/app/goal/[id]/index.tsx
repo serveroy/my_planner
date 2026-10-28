@@ -314,6 +314,7 @@ export default function GoalDashboard() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goalId = Number(id);
   const { t, lang } = useI18n();
+  const c = useColors();
   const goal = useGoal(goalId);
   const hasPlan = !!goal.data?.current_plan_version;
   const plan = usePlan(goalId, hasPlan);
@@ -332,8 +333,14 @@ export default function GoalDashboard() {
         options={{
           title: goal.data.title,
           headerRight: () => (
-            <Row style={{ gap: 2 }}>
-              <Button title={t('chat')} icon="message-circle" small onPress={() => router.push(`/goal/${goalId}/chat`)} />
+            <Row style={{ gap: 4 }}>
+              <IconButton
+                name="message-circle"
+                label={t('chat')}
+                color={c.primary}
+                badge={goal.data.unread_notifications > 0}
+                onPress={() => router.push(`/goal/${goalId}/chat`)}
+              />
               <IconButton name="sliders" label={t('goalSettings')} onPress={() => router.push(`/goal/${goalId}/settings`)} />
             </Row>
           ),
