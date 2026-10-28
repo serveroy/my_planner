@@ -1,0 +1,611 @@
+{
+  "task": "planner.generate",
+  "output_kind": "json",
+  "input_schema": {
+    "$defs": {
+      "AvailableTime": {
+        "properties": {
+          "minutes_per_day": {
+            "default": 30,
+            "maximum": 1440,
+            "minimum": 5,
+            "title": "Minutes Per Day",
+            "type": "integer"
+          },
+          "days_per_week": {
+            "default": 5,
+            "maximum": 7,
+            "minimum": 1,
+            "title": "Days Per Week",
+            "type": "integer"
+          },
+          "preferred_days": {
+            "default": [],
+            "items": {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            "title": "Preferred Days",
+            "type": "array"
+          },
+          "preferred_time_of_day": {
+            "default": "any",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "any"
+            ],
+            "title": "Preferred Time Of Day",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "AvailableTime",
+        "type": "object"
+      },
+      "GoalBrief": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "current_state": {
+            "default": "",
+            "title": "Current State",
+            "type": "string"
+          },
+          "deadline": {
+            "format": "date",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "available_time": {
+            "$ref": "#/$defs/AvailableTime",
+            "default": {
+              "minutes_per_day": 30,
+              "days_per_week": 5,
+              "preferred_days": [],
+              "preferred_time_of_day": "any",
+              "notes": ""
+            }
+          },
+          "extra_context": {
+            "default": "",
+            "title": "Extra Context",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "deadline"
+        ],
+        "title": "GoalBrief",
+        "type": "object"
+      },
+      "QAItem": {
+        "properties": {
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Answer"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "question",
+          "field"
+        ],
+        "title": "QAItem",
+        "type": "object"
+      },
+      "ResponseStyle": {
+        "description": "``AnswerFormat`` with the language already resolved. This is what the models see.",
+        "properties": {
+          "language": {
+            "enum": [
+              "he",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "verbosity": {
+            "default": "balanced",
+            "enum": [
+              "concise",
+              "balanced",
+              "detailed"
+            ],
+            "title": "Verbosity",
+            "type": "string"
+          },
+          "tone": {
+            "default": "warm",
+            "enum": [
+              "warm",
+              "direct",
+              "motivational"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "style": {
+            "default": "mixed",
+            "enum": [
+              "bullets",
+              "paragraphs",
+              "mixed"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "use_emojis": {
+            "default": false,
+            "title": "Use Emojis",
+            "type": "boolean"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "title": "ResponseStyle",
+        "type": "object"
+      },
+      "SafetyFlag": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "caution",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "guidance": {
+            "title": "Guidance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "guidance"
+        ],
+        "title": "SafetyFlag",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "today": {
+        "format": "date",
+        "title": "Today",
+        "type": "string"
+      },
+      "goal": {
+        "$ref": "#/$defs/GoalBrief"
+      },
+      "style": {
+        "$ref": "#/$defs/ResponseStyle"
+      },
+      "profile": {
+        "additionalProperties": true,
+        "default": {},
+        "title": "Profile",
+        "type": "object"
+      },
+      "intake_summary": {
+        "default": "",
+        "title": "Intake Summary",
+        "type": "string"
+      },
+      "qa_history": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/QAItem"
+        },
+        "title": "Qa History",
+        "type": "array"
+      },
+      "safety_flags": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/SafetyFlag"
+        },
+        "title": "Safety Flags",
+        "type": "array"
+      }
+    },
+    "required": [
+      "today",
+      "goal",
+      "style"
+    ],
+    "title": "GenerateInput",
+    "type": "object"
+  },
+  "output_schema": {
+    "$defs": {
+      "Metric": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "title": "Unit",
+            "type": "string"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Baseline"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          },
+          "direction": {
+            "default": "increase",
+            "enum": [
+              "increase",
+              "decrease",
+              "maintain"
+            ],
+            "title": "Direction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "Metric",
+        "type": "object"
+      },
+      "Milestone": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "success_criteria": {
+            "default": "",
+            "title": "Success Criteria",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "target_date"
+        ],
+        "title": "Milestone",
+        "type": "object"
+      },
+      "PlanTask": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "milestone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Milestone Id"
+          },
+          "schedule": {
+            "$ref": "#/$defs/TaskSchedule"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "maximum": 600,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Duration Minutes"
+          },
+          "metric_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metric Key"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "schedule"
+        ],
+        "title": "PlanTask",
+        "type": "object"
+      },
+      "TaskSchedule": {
+        "properties": {
+          "type": {
+            "enum": [
+              "once",
+              "daily",
+              "weekly",
+              "every_n_days"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          },
+          "days_of_week": {
+            "default": [],
+            "items": {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            "title": "Days Of Week",
+            "type": "array"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "maximum": 60,
+                "minimum": 2,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Interval Days"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
+          "time_of_day": {
+            "default": "any",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "any"
+            ],
+            "title": "Time Of Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "TaskSchedule",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "title": {
+        "title": "Title",
+        "type": "string"
+      },
+      "summary": {
+        "title": "Summary",
+        "type": "string"
+      },
+      "start_date": {
+        "format": "date",
+        "title": "Start Date",
+        "type": "string"
+      },
+      "end_date": {
+        "format": "date",
+        "title": "End Date",
+        "type": "string"
+      },
+      "milestones": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/Milestone"
+        },
+        "title": "Milestones",
+        "type": "array"
+      },
+      "tasks": {
+        "items": {
+          "$ref": "#/$defs/PlanTask"
+        },
+        "minItems": 1,
+        "title": "Tasks",
+        "type": "array"
+      },
+      "metrics": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/Metric"
+        },
+        "title": "Metrics",
+        "type": "array"
+      },
+      "tips": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Tips",
+        "type": "array"
+      },
+      "safety_notes": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Safety Notes",
+        "type": "array"
+      },
+      "assumptions": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Assumptions",
+        "type": "array"
+      }
+    },
+    "required": [
+      "title",
+      "summary",
+      "start_date",
+      "end_date",
+      "tasks"
+    ],
+    "title": "Plan",
+    "type": "object"
+  },
+  "system_prompt_template": "You are the Planner of a personal goal-planning app. Build a realistic, personalized plan from the goal, the user's current state, deadline, available time and intake answers.\n\nRules:\n- The plan runs from today (start_date) to the goal deadline (end_date).\n- Respect available_time: tasks due on the same day must fit minutes_per_day; use at most days_per_week active days and prefer preferred_days / preferred_time_of_day.\n- Use 2-6 milestones spread over the period, each with a target_date and measurable success_criteria.\n- Tasks are concrete and repeatable. Give each a short stable id (t1, t2, ...), a schedule (once / daily / weekly with days_of_week / every_n_days), duration_minutes and, when useful, a milestone_id.\n- Add metrics (snake_case key, unit, baseline, target, direction) for anything measurable the user should log.\n- Respect every safety flag. Keep targets safe and evidence-based (e.g. weight loss at most ~0.5-1 kg per week); add safety_notes where relevant, and suggest consulting a professional when appropriate.\n- assumptions lists anything you assumed because it was not answered.\n\nOutput: one JSON object only, matching the Plan schema."
+}
