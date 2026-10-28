@@ -1,11 +1,9 @@
-import { Link } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthContext';
+import { AuthShell } from '@/components/AuthShell';
 import { useI18n } from '@/i18n/I18nContext';
-import { AppText, Button, Card, Field, Screen } from '@/ui';
-import { LanguageToggle } from '@/ui/LanguageToggle';
+import { AppText, Button, Field } from '@/ui';
 import { space, useColors } from '@/ui/theme';
 
 export default function Login() {
@@ -30,22 +28,11 @@ export default function Login() {
   };
 
   return (
-    <Screen>
-      <View style={{ flex: 1, justifyContent: 'center', paddingVertical: space.xl }}>
-        <LanguageToggle />
-        <AppText size={30} weight="700" style={{ marginBottom: space.lg }}>
-          {t('appName')}
-        </AppText>
-        <Card>
-          <Field label={t('email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-          <Field label={t('password')} value={password} onChangeText={setPassword} secureTextEntry onSubmitEditing={submit} />
-          {error ? <AppText style={{ color: c.danger, marginBottom: space.sm }}>{error}</AppText> : null}
-          <Button title={t('login')} onPress={submit} loading={busy} disabled={!email || !password} />
-        </Card>
-        <Link href="/register" style={{ color: c.primary, textAlign: 'center', marginTop: space.md }}>
-          {t('noAccount')}
-        </Link>
-      </View>
-    </Screen>
+    <AuthShell title={t('login')} footer={t('noAccount')} footerHref="/register">
+      <Field label={t('email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+      <Field label={t('password')} value={password} onChangeText={setPassword} secureTextEntry onSubmitEditing={submit} />
+      {error ? <AppText size={13} style={{ color: c.danger, marginBottom: space.sm }}>{error}</AppText> : null}
+      <Button title={t('login')} onPress={submit} loading={busy} disabled={!email || !password} />
+    </AuthShell>
   );
 }

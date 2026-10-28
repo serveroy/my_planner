@@ -1,3 +1,4 @@
+import { Rubik_400Regular, Rubik_500Medium, Rubik_600SemiBold, Rubik_700Bold, useFonts } from '@expo-google-fonts/rubik';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,26 +7,27 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { I18nProvider, useI18n } from '@/i18n/I18nContext';
-import { useColors } from '@/ui/theme';
+import { fonts, useColors } from '@/ui/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-function Navigator() {
+function Navigator({ fontsReady }: { fontsReady: boolean }) {
   const { user, ready } = useAuth();
   const { t } = useI18n();
   const c = useColors();
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync();
-  }, [ready]);
-  if (!ready) return null;
+    if (ready && fontsReady) SplashScreen.hideAsync();
+  }, [ready, fontsReady]);
+  if (!ready || !fontsReady) return null;
 
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: c.card },
+        headerStyle: { backgroundColor: c.bg },
+        headerShadowVisible: false,
         headerTintColor: c.text,
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontFamily: fonts['600'], fontSize: 17 },
         contentStyle: { backgroundColor: c.bg },
         headerBackTitle: t('back'),
       }}>
@@ -49,13 +51,18 @@ function Navigator() {
 
 export default function RootLayout() {
   const scheme = useColorScheme();
+  const c = useColors();
+  const [fontsLoaded, fontError] = useFonts({ Rubik_400Regular, Rubik_500Medium, Rubik_600SemiBold, Rubik_700Bold });
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 5_000 } } }));
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const navTheme = { ...base, colors: { ...base.colors, background: c.bg, card: c.bg, text: c.text, border: c.border, primary: c.primary } };
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navTheme}>
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider>
-            <Navigator />
+            {/* If the font fails to load, fall back to the system font instead of blocking the app. */}
+            <Navigator fontsReady={fontsLoaded || !!fontError} />
           </AuthProvider>
         </I18nProvider>
       </QueryClientProvider>

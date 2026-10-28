@@ -15,7 +15,7 @@ import {
 } from '@/components/GoalFields';
 import { useI18n } from '@/i18n/I18nContext';
 import { addDays, todayISO } from '@/lib/text';
-import { AppText, Button, Card, Chips, Field, Screen, SectionTitle } from '@/ui';
+import { AppText, Button, Card, Chips, Collapsible, Field, Screen, SectionTitle } from '@/ui';
 import { space, useColors } from '@/ui/theme';
 
 export default function NewGoal() {
@@ -65,16 +65,18 @@ export default function NewGoal() {
       </Card>
 
       <AvailableTimeFields value={form.available_time} onChange={(v) => set('available_time', v)} />
-      <AnswerFormatFields value={form.answer_format} onChange={(v) => set('answer_format', v)} />
-      <UpdateModeField value={form.update_mode} onChange={(v) => set('update_mode', v)} />
-      <CheckinFields value={form.checkin_settings} onChange={(v) => set('checkin_settings', v)} />
 
-      <Card>
-        <Field label={t('extraContext')} value={form.extra_context} onChangeText={(v) => set('extra_context', v)} multiline />
-      </Card>
+      <Collapsible title={t('preferences')} hint={t('preferencesHint')}>
+        <AnswerFormatFields value={form.answer_format} onChange={(v) => set('answer_format', v)} />
+        <UpdateModeField value={form.update_mode} onChange={(v) => set('update_mode', v)} />
+        <CheckinFields value={form.checkin_settings} onChange={(v) => set('checkin_settings', v)} />
+        <Card>
+          <Field label={t('extraContext')} value={form.extra_context} onChangeText={(v) => set('extra_context', v)} multiline />
+        </Card>
+      </Collapsible>
 
-      {create.error ? <AppText style={{ color: c.danger, marginBottom: space.sm }}>{create.error.message}</AppText> : null}
-      <Button title={t('startIntake')} onPress={submit} disabled={!valid} loading={create.isPending} style={{ marginBottom: space.xl }} />
+      {create.error ? <AppText size={13} style={{ color: c.danger, marginBottom: space.sm }}>{create.error.message}</AppText> : null}
+      <Button title={t('startIntake')} onPress={submit} disabled={!valid} loading={create.isPending} />
     </Screen>
   );
 }

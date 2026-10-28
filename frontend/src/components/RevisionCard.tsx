@@ -1,39 +1,42 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { useDecideRevision } from '@/api/hooks';
 import type { Revision } from '@/api/types';
 import { useI18n } from '@/i18n/I18nContext';
 import { textDir } from '@/lib/text';
-import { AppText, Badge, Button, Card, Row } from '@/ui';
+import { AppText, Badge, Button, Card, Icon, Row } from '@/ui';
 import { space, useColors } from '@/ui/theme';
 
 export function RevisionCard({ goalId, revision }: { goalId: number; revision: Revision }) {
   const { t } = useI18n();
   const c = useColors();
   const decide = useDecideRevision(goalId);
+  const [details, setDetails] = useState(false);
   return (
     <Card tone="warning">
-      <AppText weight="700" style={{ marginBottom: space.sm }}>
-        {t('pendingTitle')}
-      </AppText>
-      <AppText style={[{ marginBottom: space.sm }, textDir(revision.explanation)]}>{revision.explanation}</AppText>
-      {revision.changes.length ? (
-        <View style={{ marginBottom: space.md }}>
-          <AppText muted size={12} weight="600">
-            {t('changes')}
-          </AppText>
+      <Row style={{ marginBottom: 4 }}>
+        <Icon name="edit-3" size={15} color={c.warning} />
+        <AppText weight="600">{t('pendingTitle')}</AppText>
+      </Row>
+      <AppText size={13} style={[{ marginBottom: space.sm }, textDir(revision.explanation)]}>{revision.explanation}</AppText>
+      {details ? (
+        <View style={{ marginBottom: space.sm }}>
           {revision.changes.map((ch, i) => (
-            <AppText key={i} muted size={13} style={{ writingDirection: 'ltr', textAlign: 'left' }}>
+            <AppText key={i} muted size={12} style={{ writingDirection: 'ltr', textAlign: 'left' }}>
               • {ch}
             </AppText>
           ))}
         </View>
       ) : null}
       <Row>
-        <Button title={t('approve')} small loading={decide.isPending} onPress={() => decide.mutate({ revisionId: revision.id, approve: true })} />
-        <Button title={t('reject')} small variant="secondary" disabled={decide.isPending} onPress={() => decide.mutate({ revisionId: revision.id, approve: false })} />
+        <Button title={t('approve')} icon="check" small loading={decide.isPending} onPress={() => decide.mutate({ revisionId: revision.id, approve: true })} />
+        <Button title={t('reject')} small variant="ghost" disabled={decide.isPending} onPress={() => decide.mutate({ revisionId: revision.id, approve: false })} />
+        {revision.changes.length ? (
+          <Button title={details ? t('showLess') : t('details')} small variant="ghost" onPress={() => setDetails(!details)} style={{ marginStart: 'auto' }} />
+        ) : null}
       </Row>
-      {decide.error ? <AppText style={{ color: c.danger, marginTop: space.sm }}>{decide.error.message}</AppText> : null}
+      {decide.error ? <AppText size={12} style={{ color: c.danger, marginTop: space.sm }}>{decide.error.message}</AppText> : null}
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 const en = {
   appName: 'My Planner',
+  tagline: 'A plan that adapts to you, and a coach that keeps you going.',
   // auth
   login: 'Log in',
   register: 'Create account',
@@ -13,7 +14,8 @@ const en = {
   // goals list
   myGoals: 'My goals',
   newGoal: 'New goal',
-  noGoals: 'No goals yet. Tell me what you want to achieve and I will build a plan with you.',
+  emptyTitle: 'Start your first goal',
+  noGoals: 'Tell me what you want to achieve, and we will build a plan that fits your life.',
   daysLeft: '{n} days left',
   pendingUpdate: 'Plan update waiting',
   status_intake: 'Getting to know you',
@@ -67,6 +69,9 @@ const en = {
   checkinsEnabled: 'Let the coach check in on me',
   dailyTime: 'Daily check-in time (HH:MM)',
   extraContext: 'Anything else I should know? (optional)',
+  preferences: 'Preferences',
+  preferencesHint: 'Answer style, plan updates and check-ins. The defaults work well.',
+  goalStatus: 'Goal',
   startIntake: 'Continue',
   // intake
   intakeTitle: "Let's get to know you",
@@ -124,6 +129,10 @@ const en = {
   // chat
   chatPh: 'Write to your coach…',
   checkinLabel: 'Check-in',
+  supportLabel: 'Support',
+  showMore: 'Show more',
+  showLess: 'Show less',
+  details: 'Details',
   planUpdatedLabel: 'Plan updated',
   proposalLabel: 'Suggested change',
   coachTyping: 'Coach is typing…',
@@ -164,6 +173,7 @@ export type StringKey = keyof typeof en;
 
 const he: Record<StringKey, string> = {
   appName: 'המתכנן שלי',
+  tagline: 'תוכנית שמתאימה את עצמה אליך, ומאמן שעוזר לך להתמיד.',
   login: 'התחברות',
   register: 'יצירת חשבון',
   email: 'אימייל',
@@ -175,7 +185,8 @@ const he: Record<StringKey, string> = {
   logout: 'התנתקות',
   myGoals: 'המטרות שלי',
   newGoal: 'מטרה חדשה',
-  noGoals: 'עדיין אין מטרות. ספר/י לי מה תרצה/י להשיג, ונבנה יחד תוכנית.',
+  emptyTitle: 'בוא/י נתחיל במטרה הראשונה',
+  noGoals: 'ספר/י לי מה תרצה/י להשיג, ונבנה יחד תוכנית שמתאימה לחיים שלך.',
   daysLeft: 'נותרו {n} ימים',
   pendingUpdate: 'עדכון תוכנית ממתין',
   status_intake: 'מכירים אותך',
@@ -228,6 +239,9 @@ const he: Record<StringKey, string> = {
   checkinsEnabled: 'המאמן יכול לפנות אליי',
   dailyTime: 'שעת בדיקה יומית (HH:MM)',
   extraContext: 'עוד משהו שכדאי שאדע? (לא חובה)',
+  preferences: 'העדפות',
+  preferencesHint: 'סגנון תשובות, עדכוני תוכנית ובדיקות מצב. ברירות המחדל טובות.',
+  goalStatus: 'מטרה',
   startIntake: 'המשך',
   intakeTitle: 'בוא/י נכיר',
   intakeIntro: 'כמה שאלות כדי שהתוכנית באמת תתאים לך.',
@@ -282,6 +296,10 @@ const he: Record<StringKey, string> = {
   ms_passed: 'עבר',
   chatPh: 'כתוב/כתבי למאמן…',
   checkinLabel: 'בדיקת מצב',
+  supportLabel: 'תמיכה',
+  showMore: 'עוד',
+  showLess: 'פחות',
+  details: 'פרטים',
   planUpdatedLabel: 'התוכנית עודכנה',
   proposalLabel: 'הצעה לשינוי',
   coachTyping: 'המאמן מקליד…',

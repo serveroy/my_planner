@@ -1,14 +1,50 @@
 import { router } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Fragment } from 'react';
+import { Pressable, View } from 'react-native';
 
 import { useMarkRead, useNotifications } from '@/api/hooks';
+import type { AppNotification } from '@/api/types';
 import { useI18n } from '@/i18n/I18nContext';
 import { formatDate, textDir } from '@/lib/text';
-import { AppText, Badge, Button, Card, ErrorView, Loading, Row, Screen } from '@/ui';
-import { space } from '@/ui/theme';
+import { AppText, Button, Card, Divider, ErrorView, Icon, type IconName, Loading, Row, Screen } from '@/ui';
+import { radius, space, useColors } from '@/ui/theme';
+
+const ICONS: Record<string, IconName> = {
+  checkin: 'bell',
+  plan_ready: 'flag',
+  revision_proposal: 'edit-3',
+  revision_applied: 'refresh-cw',
+};
+
+function NotificationRow({ n, onPress }: { n: AppNotification; onPress: () => void }) {
+  const { lang } = useI18n();
+  const c = useColors();
+  const unread = !n.read_at;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ paddingVertical: space.md, opacity: pressed ? 0.6 : 1 })}>
+      <Row style={{ alignItems: 'flex-start', gap: space.md }}>
+        <View style={{ width: 30, height: 30, borderRadius: radius.pill, backgroundColor: unread ? c.accentSoft : c.fill, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={ICONS[n.type] ?? 'bell'} size={14} color={unread ? c.accent : c.muted} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <AppText weight={unread ? '600' : '400'} size={13} style={[{ flex: 1 }, textDir(n.title)]} numberOfLines={1}>
+              {n.title}
+            </AppText>
+            <AppText size={11} style={{ color: c.faint }}>{formatDate(n.created_at, lang)}</AppText>
+          </Row>
+          <AppText muted size={13} style={textDir(n.body)} numberOfLines={2}>
+            {n.body}
+          </AppText>
+        </View>
+      </Row>
+    </Pressable>
+  );
+}
 
 export default function Notifications() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
+  const c = useColors();
   const notifications = useNotifications();
   const markRead = useMarkRead();
 
@@ -18,33 +54,32 @@ export default function Notifications() {
 
   return (
     <Screen>
-      {items.some((n) => !n.read_at) ? (
-        <Button title={t('markAllRead')} variant="ghost" small onPress={() => markRead.mutate({})} style={{ alignSelf: 'flex-end', marginBottom: space.sm }} />
-      ) : null}
-      {items.length === 0 ? <AppText muted>{t('noNotifications')}</AppText> : null}
-      {items.map((n) => (
-        <Pressable
-          key={n.id}
-          onPress={() => {
-            if (!n.read_at) markRead.mutate({ id: n.id });
-            if (n.goal_id) router.push(`/goal/${n.goal_id}/chat`);
-          }}>
-          <Card tone={n.read_at ? undefined : 'primary'}>
-            <Row style={{ justifyContent: 'space-between', marginBottom: space.xs }}>
-              <AppText weight="700" style={[{ flex: 1 }, textDir(n.title)]}>
-                {n.title}
-              </AppText>
-              {!n.read_at ? <Badge text="•" tone="danger" /> : null}
-            </Row>
-            <AppText style={textDir(n.body)} numberOfLines={3}>
-              {n.body}
-            </AppText>
-            <AppText muted size={12} style={{ marginTop: space.xs }}>
-              {formatDate(n.created_at, lang)}
-            </AppText>
+      {items.length === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: space.xl * 2, gap: space.sm }}>
+          <Icon name="inbox" size={26} color={c.faint} />
+          <AppText muted>{t('noNotifications')}</AppText>
+        </View>
+      ) : (
+        <>
+          {items.some((n) => !n.read_at) ? (
+            <Button title={t('markAllRead')} icon="check" variant="ghost" small onPress={() => markRead.mutate({})} style={{ alignSelf: 'flex-end', marginBottom: space.xs }} />
+          ) : null}
+          <Card style={{ paddingVertical: 0 }}>
+            {items.map((n, i) => (
+              <Fragment key={n.id}>
+                {i > 0 ? <Divider /> : null}
+                <NotificationRow
+                  n={n}
+                  onPress={() => {
+                    if (!n.read_at) markRead.mutate({ id: n.id });
+                    if (n.goal_id) router.push(`/goal/${n.goal_id}/chat`);
+                  }}
+                />
+              </Fragment>
+            ))}
           </Card>
-        </Pressable>
-      ))}
+        </>
+      )}
     </Screen>
   );
 }

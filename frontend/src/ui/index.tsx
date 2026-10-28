@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import Feather from '@expo/vector-icons/Feather';
+import { type ComponentProps, type ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -16,21 +17,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useI18n } from '@/i18n/I18nContext';
 
-import { MAX_WIDTH, radius, space, useColors } from './theme';
+import { fonts, MAX_WIDTH, radius, space, useColors, type Weight } from './theme';
 
-export function AppText({ style, muted, size = 15, weight, ...rest }: TextProps & { muted?: boolean; size?: number; weight?: '400' | '500' | '600' | '700' }) {
+export type IconName = ComponentProps<typeof Feather>['name'];
+
+export function Icon({ name, size = 18, color }: { name: IconName; size?: number; color?: string }) {
+  const c = useColors();
+  return <Feather name={name} size={size} color={color ?? c.text} />;
+}
+
+export function AppText({
+  style,
+  muted,
+  size = 14,
+  weight = '400',
+  ...rest
+}: TextProps & { muted?: boolean; size?: number; weight?: Weight }) {
   const c = useColors();
   return (
     <Text
       {...rest}
-      style={[{ color: muted ? c.muted : c.text, fontSize: size, fontWeight: weight, textAlign: 'auto' }, style]}
+      style={[{ color: muted ? c.muted : c.text, fontSize: size, lineHeight: Math.round(size * 1.4), fontFamily: fonts[weight], textAlign: 'auto' }, style]}
     />
   );
 }
 
-export function Screen({ children, scroll = true, padded = true }: { children: ReactNode; scroll?: boolean; padded?: boolean }) {
+export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const c = useColors();
-  const inner = <View style={[styles.inner, padded && { padding: space.lg }]}>{children}</View>;
+  const inner = <View style={styles.inner}>{children}</View>;
   return (
     <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
       {scroll ? (
@@ -44,21 +58,49 @@ export function Screen({ children, scroll = true, padded = true }: { children: R
   );
 }
 
-export function Card({ children, style, tone }: { children: ReactNode; style?: ViewStyle; tone?: 'primary' | 'warning' | 'danger' | 'success' }) {
+export function Card({ children, style, tone, flush }: { children: ReactNode; style?: ViewStyle; tone?: 'primary' | 'accent' | 'warning' | 'danger'; flush?: boolean }) {
   const c = useColors();
-  const bg = tone ? { primary: c.primarySoft, warning: c.warningSoft, danger: c.dangerSoft, success: c.successSoft }[tone] : c.card;
-  return <View style={[styles.card, { backgroundColor: bg, borderColor: c.border }, style]}>{children}</View>;
+  const bg = tone ? { primary: c.primarySoft, accent: c.accentSoft, warning: c.warningSoft, danger: c.dangerSoft }[tone] : c.surface;
+  return (
+    <View style={[styles.card, { backgroundColor: bg, borderColor: tone ? 'transparent' : c.border }, flush && { paddingVertical: 0 }, style]}>
+      {children}
+    </View>
+  );
 }
 
+/** Small muted heading above a group. */
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <View style={styles.sectionTitle}>
-      <AppText size={17} weight="700">
+      <AppText muted size={12} weight="500" style={{ letterSpacing: 0.4, textTransform: 'uppercase' }}>
         {children}
       </AppText>
       {right}
     </View>
   );
+}
+
+/** A tappable header that shows or hides its content. */
+export function Collapsible({ title, hint, children, initiallyOpen = false }: { title: string; hint?: string; children: ReactNode; initiallyOpen?: boolean }) {
+  const c = useColors();
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <View style={{ marginBottom: space.md }}>
+      <Pressable onPress={() => setOpen(!open)} style={({ pressed }) => [styles.row, { paddingVertical: space.sm, opacity: pressed ? 0.6 : 1 }]}>
+        <View style={{ flex: 1 }}>
+          <AppText weight="500">{title}</AppText>
+          {hint && !open ? <AppText muted size={12}>{hint}</AppText> : null}
+        </View>
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} color={c.muted} />
+      </Pressable>
+      {open ? children : null}
+    </View>
+  );
+}
+
+export function Divider() {
+  const c = useColors();
+  return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.border }} />;
 }
 
 export function Button({
@@ -68,37 +110,55 @@ export function Button({
   disabled,
   loading,
   small,
+  icon,
   style,
 }: {
-  title: string;
+  title?: string;
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
   small?: boolean;
+  icon?: IconName;
   style?: ViewStyle;
 }) {
   const c = useColors();
-  const bg = { primary: c.primary, secondary: c.primarySoft, ghost: 'transparent', danger: c.dangerSoft }[variant];
-  const fg = { primary: c.primaryText, secondary: c.primary, ghost: c.primary, danger: c.danger }[variant];
+  const bg = { primary: c.primary, secondary: c.fill, ghost: 'transparent', danger: c.dangerSoft }[variant];
+  const fg = { primary: c.onPrimary, secondary: c.text, ghost: c.primary, danger: c.danger }[variant];
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
         small && styles.buttonSmall,
-        { backgroundColor: bg, opacity: disabled ? 0.45 : pressed ? 0.8 : 1 },
+        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.75 : 1 },
         style,
       ]}>
       {loading ? (
-        <ActivityIndicator color={fg} />
+        <ActivityIndicator color={fg} size="small" />
       ) : (
-        <AppText style={{ color: fg }} weight="600" size={small ? 13 : 15}>
-          {title}
-        </AppText>
+        <>
+          {icon ? <Icon name={icon} size={small ? 14 : 16} color={fg} /> : null}
+          {title ? (
+            <AppText style={{ color: fg }} weight="500" size={small ? 13 : 14}>
+              {title}
+            </AppText>
+          ) : null}
+        </>
       )}
+    </Pressable>
+  );
+}
+
+export function IconButton({ name, onPress, label, color, badge }: { name: IconName; onPress: () => void; label: string; color?: string; badge?: boolean }) {
+  const c = useColors();
+  return (
+    <Pressable onPress={onPress} accessibilityLabel={label} hitSlop={8} style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.6 : 1 }]}>
+      <Icon name={name} size={20} color={color ?? c.text} />
+      {badge ? <View style={[styles.dot, { backgroundColor: c.accent, borderColor: c.surface }]} /> : null}
     </Pressable>
   );
 }
@@ -108,22 +168,22 @@ export function Field({ label, hint, style, ...props }: TextInputProps & { label
   return (
     <View style={{ marginBottom: space.md }}>
       {label ? (
-        <AppText weight="600" size={14} style={{ marginBottom: space.xs }}>
+        <AppText muted size={12} weight="500" style={{ marginBottom: 3 }}>
           {label}
         </AppText>
       ) : null}
       <TextInput
-        placeholderTextColor={c.muted}
+        placeholderTextColor={c.faint}
         {...props}
         style={[
           styles.input,
-          { borderColor: c.border, color: c.text, backgroundColor: c.card, textAlign: 'auto' },
-          props.multiline && { minHeight: 80, textAlignVertical: 'top' },
+          { color: c.text, backgroundColor: c.fill, fontFamily: fonts['400'], textAlign: 'auto' },
+          props.multiline && { minHeight: 64, textAlignVertical: 'top' },
           style,
         ]}
       />
       {hint ? (
-        <AppText muted size={12} style={{ marginTop: 2 }}>
+        <AppText size={11} style={{ marginTop: 2, color: c.faint }}>
           {hint}
         </AppText>
       ) : null}
@@ -147,62 +207,64 @@ export function Chips<T extends string | number>({
   return (
     <View style={{ marginBottom: space.md }}>
       {label ? (
-        <AppText weight="600" size={14} style={{ marginBottom: space.xs }}>
+        <AppText muted size={12} weight="500" style={{ marginBottom: 4 }}>
           {label}
         </AppText>
       ) : null}
       <View style={styles.chipRow}>
-        {options.map((o) => (
-          <Pressable
-            key={String(o.value)}
-            onPress={() => onChange(o.value)}
-            style={[
-              styles.chip,
-              { borderColor: selected(o.value) ? c.primary : c.border, backgroundColor: selected(o.value) ? c.primarySoft : c.card },
-            ]}>
-            <AppText size={14} style={{ color: selected(o.value) ? c.primary : c.text }} weight={selected(o.value) ? '600' : '400'}>
-              {o.label}
-            </AppText>
-          </Pressable>
-        ))}
+        {options.map((o) => {
+          const on = selected(o.value);
+          return (
+            <Pressable
+              key={String(o.value)}
+              onPress={() => onChange(o.value)}
+              style={({ pressed }) => [styles.chip, { backgroundColor: on ? c.primary : c.fill, opacity: pressed ? 0.75 : 1 }]}>
+              <AppText size={13} weight={on ? '500' : '400'} style={{ color: on ? c.onPrimary : c.text }}>
+                {o.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 export function SwitchRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  const c = useColors();
   return (
-    <View style={[styles.row, { marginBottom: space.md }]}>
+    <View style={[styles.row, { marginBottom: space.md, justifyContent: 'space-between' }]}>
       <AppText style={{ flex: 1 }}>{label}</AppText>
-      <Switch value={value} onValueChange={onChange} />
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: c.primary, false: c.border }} thumbColor={c.surface} />
     </View>
   );
 }
 
-export function Badge({ text, tone = 'primary' }: { text: string; tone?: 'primary' | 'warning' | 'success' | 'danger' | 'muted' }) {
+export function Badge({ text, tone = 'primary' }: { text: string; tone?: 'primary' | 'accent' | 'warning' | 'success' | 'danger' | 'muted' }) {
   const c = useColors();
   const map = {
     primary: [c.primarySoft, c.primary],
+    accent: [c.accentSoft, c.accent],
     warning: [c.warningSoft, c.warning],
     success: [c.successSoft, c.success],
     danger: [c.dangerSoft, c.danger],
-    muted: [c.border, c.muted],
+    muted: [c.fill, c.muted],
   } as const;
   const [bg, fg] = map[tone];
   return (
     <View style={[styles.badge, { backgroundColor: bg }]}>
-      <AppText size={12} weight="600" style={{ color: fg }}>
+      <AppText size={11} weight="500" style={{ color: fg, lineHeight: 15 }}>
         {text}
       </AppText>
     </View>
   );
 }
 
-export function ProgressBar({ value }: { value: number }) {
+export function ProgressBar({ value, color }: { value: number; color?: string }) {
   const c = useColors();
   return (
-    <View style={[styles.bar, { backgroundColor: c.border }]}>
-      <View style={{ width: `${Math.round(Math.min(Math.max(value, 0), 1) * 100)}%`, backgroundColor: c.success, height: '100%', borderRadius: radius.pill }} />
+    <View style={[styles.bar, { backgroundColor: c.fill }]}>
+      <View style={{ width: `${Math.round(Math.min(Math.max(value, 0), 1) * 100)}%`, backgroundColor: color ?? c.primary, height: '100%', borderRadius: radius.pill }} />
     </View>
   );
 }
@@ -211,9 +273,9 @@ export function Loading() {
   const c = useColors();
   const { t } = useI18n();
   return (
-    <View style={styles.center}>
+    <View style={[styles.center, { backgroundColor: c.bg }]}>
       <ActivityIndicator color={c.primary} />
-      <AppText muted style={{ marginTop: space.sm }}>
+      <AppText muted size={13} style={{ marginTop: space.sm }}>
         {t('loading')}
       </AppText>
     </View>
@@ -222,13 +284,15 @@ export function Loading() {
 
 export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const { t } = useI18n();
+  const c = useColors();
   return (
-    <View style={styles.center}>
-      <AppText weight="600">{t('error')}</AppText>
-      <AppText muted style={{ marginVertical: space.sm, textAlign: 'center' }}>
+    <View style={[styles.center, { backgroundColor: c.bg }]}>
+      <Icon name="cloud-off" size={28} color={c.muted} />
+      <AppText weight="500" style={{ marginTop: space.sm }}>{t('error')}</AppText>
+      <AppText muted size={13} style={{ marginVertical: space.sm, textAlign: 'center' }}>
         {error instanceof Error ? error.message : String(error)}
       </AppText>
-      {onRetry ? <Button title={t('retry')} onPress={onRetry} variant="secondary" /> : null}
+      {onRetry ? <Button title={t('retry')} onPress={onRetry} variant="secondary" small /> : null}
     </View>
   );
 }
@@ -238,16 +302,19 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
 }
 
 export const styles = StyleSheet.create({
-  inner: { width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', flexGrow: 1 },
-  card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space.lg, marginBottom: space.md },
-  sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.md, marginBottom: space.sm },
-  button: { borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  buttonSmall: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: radius.sm },
-  input: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { borderWidth: 1, borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
+  inner: { width: '100%', maxWidth: MAX_WIDTH, alignSelf: 'center', flexGrow: 1, padding: space.lg, paddingBottom: space.xl },
+  card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingVertical: space.md, marginBottom: space.md },
+  sectionTitle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.sm, marginBottom: space.sm, minHeight: 22 },
+  button: { flexDirection: 'row', gap: 6, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  buttonSmall: { paddingVertical: 6, paddingHorizontal: 11, borderRadius: radius.sm },
+  iconButton: { padding: 6 },
+  dot: { position: 'absolute', top: 4, right: 4, width: 9, height: 9, borderRadius: 5, borderWidth: 1.5 },
+  input: { borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { borderRadius: radius.pill, paddingVertical: 5, paddingHorizontal: 11 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  badge: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3, alignSelf: 'flex-start' },
-  bar: { height: 8, borderRadius: radius.pill, overflow: 'hidden', flex: 1 },
+  badge: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
+  // flexGrow (not flex: 1) so the bar keeps its height inside column layouts.
+  bar: { height: 6, borderRadius: radius.pill, overflow: 'hidden', flexGrow: 1, alignSelf: 'stretch' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
 });

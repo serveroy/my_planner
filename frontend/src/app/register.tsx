@@ -1,11 +1,9 @@
-import { Link } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthContext';
+import { AuthShell } from '@/components/AuthShell';
 import { useI18n } from '@/i18n/I18nContext';
-import { AppText, Button, Card, Field, Screen } from '@/ui';
-import { LanguageToggle } from '@/ui/LanguageToggle';
+import { AppText, Button, Field } from '@/ui';
 import { space, useColors } from '@/ui/theme';
 
 export default function Register() {
@@ -31,23 +29,12 @@ export default function Register() {
   };
 
   return (
-    <Screen>
-      <View style={{ flex: 1, justifyContent: 'center', paddingVertical: space.xl }}>
-        <LanguageToggle />
-        <AppText size={30} weight="700" style={{ marginBottom: space.lg }}>
-          {t('register')}
-        </AppText>
-        <Card>
-          <Field label={t('displayName')} value={name} onChangeText={setName} autoComplete="name" />
-          <Field label={t('email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-          <Field label={t('password')} hint={t('passwordHint')} value={password} onChangeText={setPassword} secureTextEntry />
-          {error ? <AppText style={{ color: c.danger, marginBottom: space.sm }}>{error}</AppText> : null}
-          <Button title={t('register')} onPress={submit} loading={busy} disabled={!name || !email || password.length < 8} />
-        </Card>
-        <Link href="/login" style={{ color: c.primary, textAlign: 'center', marginTop: space.md }}>
-          {t('haveAccount')}
-        </Link>
-      </View>
-    </Screen>
+    <AuthShell title={t('register')} footer={t('haveAccount')} footerHref="/login">
+      <Field label={t('displayName')} value={name} onChangeText={setName} autoComplete="name" />
+      <Field label={t('email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+      <Field label={t('password')} hint={t('passwordHint')} value={password} onChangeText={setPassword} secureTextEntry />
+      {error ? <AppText size={13} style={{ color: c.danger, marginBottom: space.sm }}>{error}</AppText> : null}
+      <Button title={t('register')} onPress={submit} loading={busy} disabled={!name || !email || password.length < 8} />
+    </AuthShell>
   );
 }

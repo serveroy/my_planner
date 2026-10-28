@@ -1,6 +1,6 @@
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Fragment, useState } from 'react';
+import { Pressable, TextInput, View } from 'react-native';
 
 import {
   useGoal,
@@ -16,8 +16,22 @@ import type { MetricProgress, Plan, PlanTask, TaskStatus, TodayTask, Weekday } f
 import { RevisionCard, RevisionStatus } from '@/components/RevisionCard';
 import { useI18n } from '@/i18n/I18nContext';
 import { addDays, formatDate, textDir, todayISO } from '@/lib/text';
-import { AppText, Badge, Button, Card, ErrorView, Field, Loading, ProgressBar, Row, Screen, SectionTitle } from '@/ui';
-import { radius, space, useColors } from '@/ui/theme';
+import {
+  AppText,
+  Button,
+  Card,
+  Divider,
+  ErrorView,
+  Icon,
+  IconButton,
+  type IconName,
+  Loading,
+  ProgressBar,
+  Row,
+  Screen,
+  SectionTitle,
+} from '@/ui';
+import { fonts, radius, space, useColors } from '@/ui/theme';
 
 const DAY_NAMES: Record<'en' | 'he', Record<Weekday, string>> = {
   en: { sun: 'Sun', mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat' },
@@ -34,76 +48,119 @@ function scheduleText(task: PlanTask, lang: 'en' | 'he', t: ReturnType<typeof us
   return task.duration_minutes ? `${text} · ${t('minutes', { n: task.duration_minutes })}` : text;
 }
 
-function StatusButton({ label, active, color, onPress }: { label: string; active: boolean; color: string; onPress: () => void }) {
+// ---- stats ------------------------------------------------------------------------------------
+
+function Stat({ icon, value, label, color }: { icon: IconName; value: string; label: string; color: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+      <Icon name={icon} size={16} color={color} />
+      <AppText size={18} weight="600">{value}</AppText>
+      <AppText muted size={11}>{label}</AppText>
+    </View>
+  );
+}
+
+function StatsStrip({ goalId }: { goalId: number }) {
+  const { t } = useI18n();
+  const c = useColors();
+  const r = useProgress(goalId).data?.report;
+  if (!r) return null;
+  return (
+    <Card style={{ flexDirection: 'row', paddingVertical: space.md }}>
+      <Stat icon="zap" value={String(r.streak_days)} label={t('streak')} color={c.accent} />
+      <Stat icon="activity" value={r.adherence_7d === null ? '—' : `${Math.round(r.adherence_7d * 100)}%`} label={t('adherence')} color={c.primary} />
+      <Stat icon="calendar" value={String(r.days_left)} label={t('remaining')} color={c.warning} />
+    </Card>
+  );
+}
+
+// ---- today ------------------------------------------------------------------------------------
+
+function StatusDot({ active, color, onPress, label, children }: { active: boolean; color: string; onPress: () => void; label: string; children: React.ReactNode }) {
   const c = useColors();
   return (
     <Pressable
       onPress={onPress}
+      accessibilityLabel={label}
+      hitSlop={4}
       style={{
-        paddingVertical: 5,
-        paddingHorizontal: 9,
-        borderRadius: radius.sm,
-        borderWidth: 1,
-        borderColor: active ? color : c.border,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: active ? color : 'transparent',
+        borderWidth: active ? 0 : 1.5,
+        borderColor: c.border,
       }}>
-      <AppText size={12} weight="600" style={{ color: active ? '#fff' : c.muted }}>
-        {label}
-      </AppText>
+      {children}
     </Pressable>
   );
 }
 
-function TodaySection({ goalId }: { goalId: number }) {
-  const { t, lang } = useI18n();
+function TaskRow({ task, onSet }: { task: TodayTask; onSet: (s: TaskStatus) => void }) {
+  const { t } = useI18n();
   const c = useColors();
+  const done = task.status === 'done';
+  const toggle = (s: TaskStatus) => onSet(task.status === s ? 'pending' : s);
+  return (
+    <Row style={{ paddingVertical: space.md, gap: space.md }}>
+      <StatusDot active={done} color={c.success} onPress={() => toggle('done')} label={t('done')}>
+        <Icon name="check" size={15} color={done ? '#fff' : c.faint} />
+      </StatusDot>
+      <View style={{ flex: 1 }}>
+        <AppText weight="500" style={[done && { color: c.muted, textDecorationLine: 'line-through' }, textDir(task.title)]}>
+          {task.title}
+        </AppText>
+        {task.duration_minutes ? <AppText muted size={12}>{t('minutes', { n: task.duration_minutes })}</AppText> : null}
+      </View>
+      <StatusDot active={task.status === 'partial'} color={c.warning} onPress={() => toggle('partial')} label={t('partial')}>
+        <AppText size={12} weight="600" style={{ color: task.status === 'partial' ? '#fff' : c.faint, lineHeight: 14 }}>½</AppText>
+      </StatusDot>
+      <StatusDot active={task.status === 'skipped'} color={c.danger} onPress={() => toggle('skipped')} label={t('skipped')}>
+        <Icon name="x" size={13} color={task.status === 'skipped' ? '#fff' : c.faint} />
+      </StatusDot>
+    </Row>
+  );
+}
+
+function TodaySection({ goalId }: { goalId: number }) {
+  const { t, lang, isRTL } = useI18n();
   const [day, setDay] = useState(todayISO());
   const today = useToday(goalId, day);
   const log = useLogTask(goalId);
   const isToday = day === todayISO();
-  const setStatus = (task: TodayTask, status: TaskStatus) =>
-    log.mutate({ taskId: task.task_id, date: day, status: task.status === status ? 'pending' : status }, { onSuccess: () => today.refetch() });
+  const tasks = today.data?.tasks ?? [];
 
   return (
     <>
       <SectionTitle
         right={
-          <Row>
-            <Button title="‹" small variant="ghost" onPress={() => setDay(addDays(day, -1))} />
-            <AppText muted size={13}>
+          <Row style={{ gap: 0 }}>
+            <IconButton name={isRTL ? 'chevron-right' : 'chevron-left'} label="previous day" onPress={() => setDay(addDays(day, -1))} />
+            <AppText muted size={12} style={{ minWidth: 70, textAlign: 'center' }}>
               {isToday ? t('today') : formatDate(day, lang)}
             </AppText>
-            <Button title="›" small variant="ghost" onPress={() => setDay(addDays(day, 1))} disabled={isToday} />
+            {isToday ? (
+              <View style={{ width: 32 }} />
+            ) : (
+              <IconButton name={isRTL ? 'chevron-left' : 'chevron-right'} label="next day" onPress={() => setDay(addDays(day, 1))} />
+            )}
           </Row>
         }>
         {t('today')}
       </SectionTitle>
-      <Card>
+      <Card style={{ paddingVertical: tasks.length ? 0 : space.md }}>
         {today.isLoading ? (
-          <AppText muted>{t('loading')}</AppText>
-        ) : !today.data?.tasks.length ? (
-          <AppText muted>{t('noTasksToday')}</AppText>
+          <AppText muted size={13}>{t('loading')}</AppText>
+        ) : !tasks.length ? (
+          <AppText muted size={13}>{t('noTasksToday')}</AppText>
         ) : (
-          today.data.tasks.map((task) => (
-            <View key={task.task_id} style={{ paddingVertical: space.sm, borderBottomWidth: 1, borderBottomColor: c.border }}>
-              <Row style={{ justifyContent: 'space-between' }}>
-                <View style={{ flex: 1 }}>
-                  <AppText weight="600" style={[task.status === 'done' && { textDecorationLine: 'line-through', color: c.muted }, textDir(task.title)]}>
-                    {task.title}
-                  </AppText>
-                  {task.duration_minutes ? (
-                    <AppText muted size={12}>
-                      {t('minutes', { n: task.duration_minutes })}
-                    </AppText>
-                  ) : null}
-                </View>
-                <Row style={{ gap: 6 }}>
-                  <StatusButton label={t('done')} active={task.status === 'done'} color={c.success} onPress={() => setStatus(task, 'done')} />
-                  <StatusButton label={t('partial')} active={task.status === 'partial'} color={c.warning} onPress={() => setStatus(task, 'partial')} />
-                  <StatusButton label={t('skipped')} active={task.status === 'skipped'} color={c.danger} onPress={() => setStatus(task, 'skipped')} />
-                </Row>
-              </Row>
-            </View>
+          tasks.map((task, i) => (
+            <Fragment key={task.task_id}>
+              {i > 0 ? <Divider /> : null}
+              <TaskRow task={task} onSet={(status) => log.mutate({ taskId: task.task_id, date: day, status }, { onSuccess: () => today.refetch() })} />
+            </Fragment>
           ))
         )}
       </Card>
@@ -111,122 +168,147 @@ function TodaySection({ goalId }: { goalId: number }) {
   );
 }
 
+// ---- measurements -----------------------------------------------------------------------------
+
 function MetricRow({ goalId, metric }: { goalId: number; metric: MetricProgress }) {
   const { t } = useI18n();
+  const c = useColors();
   const logMetric = useLogMetric(goalId);
   const [value, setValue] = useState('');
-  const fmt = (v: number | null) => (v === null ? '—' : `${v} ${metric.unit}`.trim());
+  const fmt = (v: number | null) => (v === null ? '—' : `${v}`);
+  const current = metric.latest ?? metric.baseline;
+  const span = metric.baseline !== null && metric.target !== null ? metric.target - metric.baseline : null;
+  const done = span && current !== null && metric.baseline !== null ? (current - metric.baseline) / span : 0;
+  const valid = value !== '' && !isNaN(Number(value));
+  const submit = () => valid && logMetric.mutate({ key: metric.key, value: Number(value) }, { onSuccess: () => setValue('') });
   return (
-    <View style={{ marginBottom: space.md }}>
-      <AppText weight="600">{metric.name}</AppText>
-      <AppText muted size={13}>
-        {t('latest')}: {fmt(metric.latest ?? metric.baseline)} · {t('target')}: {fmt(metric.target)}
-      </AppText>
-      <Row style={{ marginTop: space.xs }}>
-        <View style={{ flex: 1 }}>
-          <Field value={value} onChangeText={setValue} keyboardType="decimal-pad" placeholder={metric.unit} style={{ paddingVertical: 6 }} />
-        </View>
-        <Button
-          title={t('logValue')}
-          small
-          disabled={!value || isNaN(Number(value))}
-          loading={logMetric.isPending}
-          onPress={() => logMetric.mutate({ key: metric.key, value: Number(value) }, { onSuccess: () => setValue('') })}
-          style={{ marginBottom: space.md }}
+    <View style={{ paddingVertical: space.md, gap: 6 }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <AppText weight="500">{metric.name}</AppText>
+        <AppText muted size={12}>
+          {fmt(current)} → {fmt(metric.target)} {metric.unit}
+        </AppText>
+      </Row>
+      <ProgressBar value={done} />
+      <Row>
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          keyboardType="decimal-pad"
+          placeholder={`${t('logValue')} (${metric.unit})`}
+          placeholderTextColor={c.faint}
+          onSubmitEditing={submit}
+          style={{ flex: 1, backgroundColor: c.fill, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6, color: c.text, fontFamily: fonts['400'], fontSize: 13 }}
         />
+        <Button icon="plus" small variant="secondary" disabled={!valid} loading={logMetric.isPending} onPress={submit} />
       </Row>
     </View>
   );
 }
 
-function ProgressSection({ goalId }: { goalId: number }) {
+function MetricsSection({ goalId }: { goalId: number }) {
   const { t } = useI18n();
-  const progress = useProgress(goalId);
-  const r = progress.data?.report;
-  if (!r) return null;
+  const metrics = useProgress(goalId).data?.report.metrics ?? [];
+  if (!metrics.length) return null;
   return (
     <>
-      <SectionTitle>{t('progress')}</SectionTitle>
-      <Card>
-        <Row style={{ justifyContent: 'space-between', marginBottom: space.md }}>
-          <View>
-            <AppText muted size={12}>{t('streak')}</AppText>
-            <AppText size={20} weight="700">{t('streakDays', { n: r.streak_days })}</AppText>
-          </View>
-          <View>
-            <AppText muted size={12}>{t('remaining')}</AppText>
-            <AppText size={20} weight="700">{r.days_left}</AppText>
-          </View>
-        </Row>
-        <AppText muted size={12}>
-          {t('adherence')}: {r.adherence_7d === null ? '—' : `${Math.round(r.adherence_7d * 100)}%`}
-        </AppText>
-        <Row style={{ marginTop: 4, marginBottom: r.metrics.length ? space.lg : 0 }}>
-          <ProgressBar value={r.adherence_7d ?? 0} />
-        </Row>
-        {r.metrics.map((m) => (
-          <MetricRow key={m.key} goalId={goalId} metric={m} />
+      <SectionTitle>{t('metrics')}</SectionTitle>
+      <Card style={{ paddingVertical: 0 }}>
+        {metrics.map((m, i) => (
+          <Fragment key={m.key}>
+            {i > 0 ? <Divider /> : null}
+            <MetricRow goalId={goalId} metric={m} />
+          </Fragment>
         ))}
       </Card>
     </>
   );
 }
 
+// ---- plan -------------------------------------------------------------------------------------
+
 function PlanSection({ plan, version }: { plan: Plan; version: number }) {
   const { t, lang } = useI18n();
+  const c = useColors();
+  const [more, setMore] = useState(false);
+  const extras = ([['tips', plan.tips], ['safetyNotes', plan.safety_notes], ['assumptions', plan.assumptions]] as const).filter(([, items]) => items.length);
   return (
     <>
-      <SectionTitle right={<Badge text={t('planVersion', { n: version })} tone="muted" />}>{t('plan')}</SectionTitle>
+      <SectionTitle right={<AppText size={11} style={{ color: c.faint }}>{t('planVersion', { n: version })}</AppText>}>{t('plan')}</SectionTitle>
       <Card>
-        <AppText style={[{ marginBottom: space.md }, textDir(plan.summary)]}>{plan.summary}</AppText>
-        <AppText weight="700" style={{ marginBottom: space.xs }}>{t('tasks')}</AppText>
+        <AppText size={13} style={[{ marginBottom: space.md }, textDir(plan.summary)]}>{plan.summary}</AppText>
         {plan.tasks.map((task) => (
-          <View key={task.id} style={{ marginBottom: space.sm }}>
-            <AppText weight="600" style={textDir(task.title)}>{task.title}</AppText>
-            <AppText muted size={13}>{scheduleText(task, lang, t)}</AppText>
-            {task.description ? <AppText muted size={13} style={textDir(task.description)}>{task.description}</AppText> : null}
-          </View>
-        ))}
-        <AppText weight="700" style={{ marginTop: space.md, marginBottom: space.xs }}>{t('milestones')}</AppText>
-        {plan.milestones.map((m) => (
-          <View key={m.id} style={{ marginBottom: space.sm }}>
-            <AppText weight="600" style={textDir(m.title)}>{m.title} · {formatDate(m.target_date, lang)}</AppText>
-            {m.success_criteria ? <AppText muted size={13} style={textDir(m.success_criteria)}>{m.success_criteria}</AppText> : null}
-          </View>
-        ))}
-        {([['tips', plan.tips], ['safetyNotes', plan.safety_notes], ['assumptions', plan.assumptions]] as const).map(([key, items]) =>
-          items.length ? (
-            <View key={key} style={{ marginTop: space.md }}>
-              <AppText weight="700" style={{ marginBottom: space.xs }}>{t(key)}</AppText>
-              {items.map((it, i) => (
-                <AppText key={i} muted size={13} style={textDir(it)}>• {it}</AppText>
-              ))}
+          <Row key={task.id} style={{ alignItems: 'flex-start', marginBottom: space.sm }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.primary, marginTop: 7 }} />
+            <View style={{ flex: 1 }}>
+              <AppText weight="500" style={textDir(task.title)}>{task.title}</AppText>
+              <AppText muted size={12}>{scheduleText(task, lang, t)}</AppText>
             </View>
-          ) : null,
-        )}
+          </Row>
+        ))}
+        <Divider />
+        <AppText muted size={12} weight="500" style={{ marginTop: space.md, marginBottom: space.sm }}>{t('milestones')}</AppText>
+        {plan.milestones.map((m, i) => (
+          <Row key={m.id} style={{ alignItems: 'flex-start' }}>
+            <View style={{ alignItems: 'center', width: 12 }}>
+              <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: c.accent, marginTop: 5 }} />
+              {i < plan.milestones.length - 1 ? <View style={{ width: 2, flex: 1, minHeight: 18, backgroundColor: c.border }} /> : null}
+            </View>
+            <Row style={{ flex: 1, justifyContent: 'space-between', paddingBottom: space.sm }}>
+              <AppText size={13} style={[{ flex: 1 }, textDir(m.title)]}>{m.title}</AppText>
+              <AppText muted size={12}>{formatDate(m.target_date, lang)}</AppText>
+            </Row>
+          </Row>
+        ))}
+        {extras.length ? (
+          <>
+            {more
+              ? extras.map(([key, items]) => (
+                  <View key={key} style={{ marginTop: space.sm }}>
+                    <AppText muted size={12} weight="500" style={{ marginBottom: 2 }}>{t(key)}</AppText>
+                    {items.map((it, i) => (
+                      <AppText key={i} size={13} style={textDir(it)}>• {it}</AppText>
+                    ))}
+                  </View>
+                ))
+              : null}
+            <Button title={more ? t('showLess') : t('showMore')} variant="ghost" small onPress={() => setMore(!more)} style={{ alignSelf: 'flex-start', marginTop: space.xs, paddingHorizontal: 0 }} />
+          </>
+        ) : null}
       </Card>
     </>
   );
 }
 
 function RequestChange({ goalId }: { goalId: number }) {
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
   const c = useColors();
   const request = useRequestRevision(goalId);
   const [text, setText] = useState('');
+  const submit = () => text.trim().length >= 2 && request.mutate(text.trim(), { onSuccess: () => setText('') });
   return (
     <>
       <SectionTitle>{t('requestChange')}</SectionTitle>
       <Card>
-        <Field value={text} onChangeText={setText} placeholder={t('requestChangePh')} multiline />
-        <Button title={t('send')} disabled={text.trim().length < 2} loading={request.isPending}
-          onPress={() => request.mutate(text.trim(), { onSuccess: () => setText('') })} />
-        {request.isSuccess ? <AppText muted style={{ marginTop: space.sm }}>{request.data ? t('requestSent') : t('noChangeNeeded')}</AppText> : null}
-        {request.error ? <AppText style={{ color: c.danger, marginTop: space.sm }}>{request.error.message}</AppText> : null}
+        <Row>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={t('requestChangePh')}
+            placeholderTextColor={c.faint}
+            onSubmitEditing={submit}
+            style={[{ flex: 1, backgroundColor: c.fill, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 9, color: c.text, fontFamily: fonts['400'], fontSize: 14 }, textDir(text || t('requestChangePh'))]}
+          />
+          <Button icon={isRTL ? 'arrow-left' : 'arrow-right'} onPress={submit} disabled={text.trim().length < 2} loading={request.isPending} style={{ paddingHorizontal: 12 }} />
+        </Row>
+        {request.isSuccess ? <AppText muted size={12} style={{ marginTop: space.sm }}>{request.data ? t('requestSent') : t('noChangeNeeded')}</AppText> : null}
+        {request.error ? <AppText size={12} style={{ color: c.danger, marginTop: space.sm }}>{request.error.message}</AppText> : null}
       </Card>
     </>
   );
 }
+
+// ---- screen -----------------------------------------------------------------------------------
 
 export default function GoalDashboard() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -236,6 +318,7 @@ export default function GoalDashboard() {
   const hasPlan = !!goal.data?.current_plan_version;
   const plan = usePlan(goalId, hasPlan);
   const revisions = useRevisions(goalId, hasPlan);
+  const [showHistory, setShowHistory] = useState(false);
 
   if (goal.isLoading) return <Loading />;
   if (goal.error || !goal.data) return <ErrorView error={goal.error} onRetry={goal.refetch} />;
@@ -249,33 +332,42 @@ export default function GoalDashboard() {
         options={{
           title: goal.data.title,
           headerRight: () => (
-            <Row style={{ paddingHorizontal: space.sm }}>
-              <Button title={`💬 ${t('chat')}`} small variant="secondary" onPress={() => router.push(`/goal/${goalId}/chat`)} />
-              <Button title="⚙️" small variant="ghost" onPress={() => router.push(`/goal/${goalId}/settings`)} />
+            <Row style={{ gap: 2 }}>
+              <Button title={t('chat')} icon="message-circle" small onPress={() => router.push(`/goal/${goalId}/chat`)} />
+              <IconButton name="sliders" label={t('goalSettings')} onPress={() => router.push(`/goal/${goalId}/settings`)} />
             </Row>
           ),
         }}
       />
       {pending ? <RevisionCard goalId={goalId} revision={pending} /> : null}
+      <StatsStrip goalId={goalId} />
       <TodaySection goalId={goalId} />
-      <ProgressSection goalId={goalId} />
+      <MetricsSection goalId={goalId} />
       {plan.data ? <PlanSection plan={plan.data.plan} version={plan.data.version} /> : null}
       <RequestChange goalId={goalId} />
       {history.length ? (
         <>
-          <SectionTitle>{t('history')}</SectionTitle>
-          {history.map((r) => (
-            <Card key={r.id}>
-              <Row style={{ justifyContent: 'space-between', marginBottom: space.xs }}>
-                <RevisionStatus status={r.status} />
-                <AppText muted size={12}>{formatDate(r.created_at, lang)}</AppText>
-              </Row>
-              <AppText size={14} style={textDir(r.explanation)}>{r.explanation}</AppText>
+          <SectionTitle right={<Button title={showHistory ? t('showLess') : t('showMore')} variant="ghost" small onPress={() => setShowHistory(!showHistory)} />}>
+            {t('history')} ({history.length})
+          </SectionTitle>
+          {showHistory ? (
+            <Card style={{ paddingVertical: 0 }}>
+              {history.map((r, i) => (
+                <Fragment key={r.id}>
+                  {i > 0 ? <Divider /> : null}
+                  <View style={{ paddingVertical: space.md, gap: 4 }}>
+                    <Row style={{ justifyContent: 'space-between' }}>
+                      <RevisionStatus status={r.status} />
+                      <AppText muted size={11}>{formatDate(r.created_at, lang)}</AppText>
+                    </Row>
+                    <AppText size={13} style={textDir(r.explanation)}>{r.explanation}</AppText>
+                  </View>
+                </Fragment>
+              ))}
             </Card>
-          ))}
+          ) : null}
         </>
       ) : null}
-      <View style={{ height: space.xl }} />
     </Screen>
   );
 }
