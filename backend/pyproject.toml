@@ -1,0 +1,37 @@
+[project]
+name = "my-planner-backend"
+version = "0.1.0"
+description = "Backend for my_planner: goal intake, plan generation, coaching chat and check-ins"
+authors = [
+    { name = "Roy", email = "roytur2005@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.54.0",
+    "pyjwt>=2.15.1",
+    "bcrypt>=5.0.0",
+    "httpx>=0.28.1",
+    "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+planner-export-contracts = "planner.llm.export_contracts:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "planner"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

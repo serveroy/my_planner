@@ -1,0 +1,372 @@
+{
+  "task": "planner.interview",
+  "output_kind": "json",
+  "input_schema": {
+    "$defs": {
+      "AvailableTime": {
+        "properties": {
+          "minutes_per_day": {
+            "default": 30,
+            "maximum": 1440,
+            "minimum": 5,
+            "title": "Minutes Per Day",
+            "type": "integer"
+          },
+          "days_per_week": {
+            "default": 5,
+            "maximum": 7,
+            "minimum": 1,
+            "title": "Days Per Week",
+            "type": "integer"
+          },
+          "preferred_days": {
+            "default": [],
+            "items": {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            "title": "Preferred Days",
+            "type": "array"
+          },
+          "preferred_time_of_day": {
+            "default": "any",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "any"
+            ],
+            "title": "Preferred Time Of Day",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "AvailableTime",
+        "type": "object"
+      },
+      "GoalBrief": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "current_state": {
+            "default": "",
+            "title": "Current State",
+            "type": "string"
+          },
+          "deadline": {
+            "format": "date",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "available_time": {
+            "$ref": "#/$defs/AvailableTime",
+            "default": {
+              "minutes_per_day": 30,
+              "days_per_week": 5,
+              "preferred_days": [],
+              "preferred_time_of_day": "any",
+              "notes": ""
+            }
+          },
+          "extra_context": {
+            "default": "",
+            "title": "Extra Context",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "deadline"
+        ],
+        "title": "GoalBrief",
+        "type": "object"
+      },
+      "QAItem": {
+        "properties": {
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Answer"
+          },
+          "skipped": {
+            "default": false,
+            "title": "Skipped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "question",
+          "field"
+        ],
+        "title": "QAItem",
+        "type": "object"
+      },
+      "ResponseStyle": {
+        "description": "``AnswerFormat`` with the language already resolved. This is what the models see.",
+        "properties": {
+          "language": {
+            "enum": [
+              "he",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "verbosity": {
+            "default": "balanced",
+            "enum": [
+              "concise",
+              "balanced",
+              "detailed"
+            ],
+            "title": "Verbosity",
+            "type": "string"
+          },
+          "tone": {
+            "default": "warm",
+            "enum": [
+              "warm",
+              "direct",
+              "motivational"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "style": {
+            "default": "mixed",
+            "enum": [
+              "bullets",
+              "paragraphs",
+              "mixed"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "use_emojis": {
+            "default": false,
+            "title": "Use Emojis",
+            "type": "boolean"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "title": "ResponseStyle",
+        "type": "object"
+      },
+      "SafetyFlag": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "caution",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "guidance": {
+            "title": "Guidance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "guidance"
+        ],
+        "title": "SafetyFlag",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "today": {
+        "format": "date",
+        "title": "Today",
+        "type": "string"
+      },
+      "goal": {
+        "$ref": "#/$defs/GoalBrief"
+      },
+      "style": {
+        "$ref": "#/$defs/ResponseStyle"
+      },
+      "qa_history": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/QAItem"
+        },
+        "title": "Qa History",
+        "type": "array"
+      },
+      "questions_remaining": {
+        "title": "Questions Remaining",
+        "type": "integer"
+      },
+      "safety_flags": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/SafetyFlag"
+        },
+        "title": "Safety Flags",
+        "type": "array"
+      }
+    },
+    "required": [
+      "today",
+      "goal",
+      "style",
+      "questions_remaining"
+    ],
+    "title": "InterviewInput",
+    "type": "object"
+  },
+  "output_schema": {
+    "properties": {
+      "action": {
+        "enum": [
+          "ask",
+          "finish"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
+      "question": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Question"
+      },
+      "field": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Field"
+      },
+      "answer_type": {
+        "default": "text",
+        "enum": [
+          "text",
+          "number",
+          "choice",
+          "multi_choice",
+          "date",
+          "boolean"
+        ],
+        "title": "Answer Type",
+        "type": "string"
+      },
+      "options": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Options",
+        "type": "array"
+      },
+      "unit": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Unit"
+      },
+      "reason": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Reason"
+      },
+      "profile": {
+        "additionalProperties": true,
+        "default": {},
+        "title": "Profile",
+        "type": "object"
+      },
+      "summary": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Summary"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "title": "InterviewOutput",
+    "type": "object"
+  },
+  "system_prompt_template": "You are the Planner of a personal goal-planning app. You are running an intake interview: ask the user the questions you need to build the best possible plan for their goal, one question at a time.\n\nRules:\n- Ask only what changes the plan. Tailor questions to the goal domain (e.g. weight loss: age, height, weight, activity level, diet, health conditions; exam prep: subject, current level, material size, exam format).\n- Never repeat a question that is already in qa_history. Do not ask for things the goal description already says.\n- Prefer easy-to-answer questions: use answer_type \"choice\"/\"multi_choice\" with options when natural, \"number\" with a unit for quantities.\n- If a safety flag or an answer suggests risk (minor, medical condition, disordered eating, injury), ask the clarifying safety question first.\n- When you have enough information, or questions_remaining is 0, finish: return action \"finish\" with a normalized profile (snake_case keys, numbers as numbers) and a short summary of what you understood.\n- field is the snake_case key the answer will be stored under. reason is one short line telling the user why you ask.\n\nOutput: one JSON object only, matching the InterviewOutput schema:\n{\"action\": \"ask\", \"question\": str, \"field\": str, \"answer_type\": \"text|number|choice|multi_choice|date|boolean\", \"options\": [str], \"unit\": str|null, \"reason\": str}\nor {\"action\": \"finish\", \"profile\": {...}, \"summary\": str}"
+}

@@ -1,0 +1,58 @@
+{
+  "task": "coach.summarize",
+  "output_kind": "text",
+  "input_schema": {
+    "$defs": {
+      "ChatTurn": {
+        "properties": {
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatTurn",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "goal_title": {
+        "title": "Goal Title",
+        "type": "string"
+      },
+      "previous_summary": {
+        "default": "",
+        "title": "Previous Summary",
+        "type": "string"
+      },
+      "messages": {
+        "items": {
+          "$ref": "#/$defs/ChatTurn"
+        },
+        "title": "Messages",
+        "type": "array"
+      }
+    },
+    "required": [
+      "goal_title",
+      "messages"
+    ],
+    "title": "SummarizeInput",
+    "type": "object"
+  },
+  "output_schema": {
+    "type": "string"
+  },
+  "system_prompt_template": "You maintain the long-term memory of a goal coach. Merge previous_summary with the new messages into an updated summary (max ~150 words, English, third person). Keep facts that matter for coaching: progress, struggles, preferences, constraints, life events, emotional state, promises made. Drop small talk.\n\nOutput: the summary text only."
+}

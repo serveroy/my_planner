@@ -1,0 +1,925 @@
+{
+  "task": "planner.revise",
+  "output_kind": "json",
+  "input_schema": {
+    "$defs": {
+      "AvailableTime": {
+        "properties": {
+          "minutes_per_day": {
+            "default": 30,
+            "maximum": 1440,
+            "minimum": 5,
+            "title": "Minutes Per Day",
+            "type": "integer"
+          },
+          "days_per_week": {
+            "default": 5,
+            "maximum": 7,
+            "minimum": 1,
+            "title": "Days Per Week",
+            "type": "integer"
+          },
+          "preferred_days": {
+            "default": [],
+            "items": {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            "title": "Preferred Days",
+            "type": "array"
+          },
+          "preferred_time_of_day": {
+            "default": "any",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "any"
+            ],
+            "title": "Preferred Time Of Day",
+            "type": "string"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "AvailableTime",
+        "type": "object"
+      },
+      "GoalBrief": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "current_state": {
+            "default": "",
+            "title": "Current State",
+            "type": "string"
+          },
+          "deadline": {
+            "format": "date",
+            "title": "Deadline",
+            "type": "string"
+          },
+          "available_time": {
+            "$ref": "#/$defs/AvailableTime",
+            "default": {
+              "minutes_per_day": 30,
+              "days_per_week": 5,
+              "preferred_days": [],
+              "preferred_time_of_day": "any",
+              "notes": ""
+            }
+          },
+          "extra_context": {
+            "default": "",
+            "title": "Extra Context",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "deadline"
+        ],
+        "title": "GoalBrief",
+        "type": "object"
+      },
+      "Metric": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "title": "Unit",
+            "type": "string"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Baseline"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          },
+          "direction": {
+            "default": "increase",
+            "enum": [
+              "increase",
+              "decrease",
+              "maintain"
+            ],
+            "title": "Direction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "Metric",
+        "type": "object"
+      },
+      "MetricProgress": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "title": "Unit",
+            "type": "string"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Baseline"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          },
+          "direction": {
+            "default": "increase",
+            "enum": [
+              "increase",
+              "decrease",
+              "maintain"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latest"
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latest Date"
+          },
+          "expected_now": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Now"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "MetricProgress",
+        "type": "object"
+      },
+      "Milestone": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "success_criteria": {
+            "default": "",
+            "title": "Success Criteria",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "target_date"
+        ],
+        "title": "Milestone",
+        "type": "object"
+      },
+      "MilestoneStatus": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "target_date": {
+            "format": "date",
+            "title": "Target Date",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "upcoming",
+              "due_soon",
+              "overdue",
+              "passed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "target_date",
+          "status"
+        ],
+        "title": "MilestoneStatus",
+        "type": "object"
+      },
+      "Plan": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "milestones": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Milestone"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/$defs/PlanTask"
+            },
+            "minItems": 1,
+            "title": "Tasks",
+            "type": "array"
+          },
+          "metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/Metric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "tips": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tips",
+            "type": "array"
+          },
+          "safety_notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Safety Notes",
+            "type": "array"
+          },
+          "assumptions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "summary",
+          "start_date",
+          "end_date",
+          "tasks"
+        ],
+        "title": "Plan",
+        "type": "object"
+      },
+      "PlanTask": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "milestone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Milestone Id"
+          },
+          "schedule": {
+            "$ref": "#/$defs/TaskSchedule"
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "maximum": 600,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Duration Minutes"
+          },
+          "metric_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metric Key"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "schedule"
+        ],
+        "title": "PlanTask",
+        "type": "object"
+      },
+      "ProgressReport": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "days_elapsed": {
+            "title": "Days Elapsed",
+            "type": "integer"
+          },
+          "days_left": {
+            "title": "Days Left",
+            "type": "integer"
+          },
+          "adherence_7d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Adherence 7D"
+          },
+          "adherence_28d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Adherence 28D"
+          },
+          "streak_days": {
+            "default": 0,
+            "title": "Streak Days",
+            "type": "integer"
+          },
+          "tasks": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/TaskProgress"
+            },
+            "title": "Tasks",
+            "type": "array"
+          },
+          "metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/MetricProgress"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "milestones": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/MilestoneStatus"
+            },
+            "title": "Milestones",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "days_elapsed",
+          "days_left"
+        ],
+        "title": "ProgressReport",
+        "type": "object"
+      },
+      "ResponseStyle": {
+        "description": "``AnswerFormat`` with the language already resolved. This is what the models see.",
+        "properties": {
+          "language": {
+            "enum": [
+              "he",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "verbosity": {
+            "default": "balanced",
+            "enum": [
+              "concise",
+              "balanced",
+              "detailed"
+            ],
+            "title": "Verbosity",
+            "type": "string"
+          },
+          "tone": {
+            "default": "warm",
+            "enum": [
+              "warm",
+              "direct",
+              "motivational"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "style": {
+            "default": "mixed",
+            "enum": [
+              "bullets",
+              "paragraphs",
+              "mixed"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "use_emojis": {
+            "default": false,
+            "title": "Use Emojis",
+            "type": "boolean"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "title": "ResponseStyle",
+        "type": "object"
+      },
+      "SafetyFlag": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "caution",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "guidance": {
+            "title": "Guidance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "guidance"
+        ],
+        "title": "SafetyFlag",
+        "type": "object"
+      },
+      "TaskProgress": {
+        "properties": {
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "partial": {
+            "default": 0,
+            "title": "Partial",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "adherence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Adherence"
+          }
+        },
+        "required": [
+          "task_id",
+          "title",
+          "due",
+          "done"
+        ],
+        "title": "TaskProgress",
+        "type": "object"
+      },
+      "TaskSchedule": {
+        "properties": {
+          "type": {
+            "enum": [
+              "once",
+              "daily",
+              "weekly",
+              "every_n_days"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          },
+          "days_of_week": {
+            "default": [],
+            "items": {
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ],
+              "type": "string"
+            },
+            "title": "Days Of Week",
+            "type": "array"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "maximum": 60,
+                "minimum": 2,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Interval Days"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "End Date"
+          },
+          "time_of_day": {
+            "default": "any",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "any"
+            ],
+            "title": "Time Of Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "TaskSchedule",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "today": {
+        "format": "date",
+        "title": "Today",
+        "type": "string"
+      },
+      "goal": {
+        "$ref": "#/$defs/GoalBrief"
+      },
+      "style": {
+        "$ref": "#/$defs/ResponseStyle"
+      },
+      "plan": {
+        "$ref": "#/$defs/Plan"
+      },
+      "progress": {
+        "$ref": "#/$defs/ProgressReport"
+      },
+      "trigger": {
+        "enum": [
+          "user_request",
+          "constraint_change",
+          "low_adherence",
+          "behind_schedule",
+          "ahead_of_schedule",
+          "weekly_review"
+        ],
+        "title": "Trigger",
+        "type": "string"
+      },
+      "trigger_details": {
+        "default": "",
+        "title": "Trigger Details",
+        "type": "string"
+      },
+      "constraints": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Constraints",
+        "type": "array"
+      },
+      "memory_summary": {
+        "default": "",
+        "title": "Memory Summary",
+        "type": "string"
+      },
+      "safety_flags": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/SafetyFlag"
+        },
+        "title": "Safety Flags",
+        "type": "array"
+      }
+    },
+    "required": [
+      "today",
+      "goal",
+      "style",
+      "plan",
+      "progress",
+      "trigger"
+    ],
+    "title": "ReviseInput",
+    "type": "object"
+  },
+  "output_schema": {
+    "$defs": {
+      "RevisionOp": {
+        "properties": {
+          "op": {
+            "enum": [
+              "add_task",
+              "update_task",
+              "remove_task",
+              "add_milestone",
+              "update_milestone",
+              "remove_milestone",
+              "add_metric",
+              "update_metric",
+              "update_plan"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target Id"
+          },
+          "data": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Data",
+            "type": "object"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "title": "RevisionOp",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "should_revise": {
+        "title": "Should Revise",
+        "type": "boolean"
+      },
+      "explanation": {
+        "title": "Explanation",
+        "type": "string"
+      },
+      "operations": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/RevisionOp"
+        },
+        "title": "Operations",
+        "type": "array"
+      }
+    },
+    "required": [
+      "should_revise",
+      "explanation"
+    ],
+    "title": "ReviseOutput",
+    "type": "object"
+  },
+  "system_prompt_template": "You are the Planner of a personal goal-planning app. Decide whether the user's plan should change and, if so, express the change as a minimal list of edit operations.\n\nYou get the current plan, a progress report, the trigger for this review and the details.\n- user_request / constraint_change: adapt the plan to what the user asked or to their new circumstances.\n- low_adherence / behind_schedule: make the plan easier to follow (fewer or shorter sessions, better days) rather than simply harder; extend timelines if the deadline allows.\n- ahead_of_schedule: consider a modest increase in challenge.\n- weekly_review: change only if the data clearly supports it; otherwise should_revise=false.\n\nOperations (keep ids stable; never reuse a removed id):\n- add_task / add_milestone / add_metric: data is the full new object.\n- update_task / update_milestone / update_metric: target_id + data with only the changed fields.\n- remove_task / remove_milestone: target_id.\n- update_plan: data may change title, summary, end_date, tips, safety_notes, assumptions.\nEach operation has a short reason. explanation tells the user, kindly and clearly, what changes and why.\nNever make the plan unsafe, and respect every safety flag.\n\nOutput: one JSON object only: {\"should_revise\": bool, \"explanation\": str, \"operations\": [...]}"
+}

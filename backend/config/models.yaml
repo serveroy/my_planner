@@ -1,0 +1,30 @@
+# Which model serves each task.
+#
+# backend: mock    -> built-in heuristic stand-ins (no GPU needed; the app works end to end)
+# backend: openai  -> any OpenAI-compatible server: vLLM, Ollama, llama.cpp server, TGI, ...
+#
+# Recommended production setup: ONE base model with one LoRA adapter per role, served by vLLM:
+#   vllm serve <base-model> --port 8001 --enable-lora \
+#     --lora-modules planner=./adapters/planner coach=./adapters/coach
+# Then set backend: openai below; `model` is the LoRA adapter name.
+#
+# Any field can be overridden per task. Env var PLANNER_MODELS_BACKEND overrides `backend` globally.
+
+defaults:
+  backend: mock
+  base_url: http://localhost:8001/v1
+  api_key: EMPTY
+  timeout_seconds: 120
+  # json_schema: send the task's JSON Schema for constrained decoding (vLLM, recent Ollama)
+  # json_object: only ask for "some JSON"   |   none: rely on the prompt + validation/retry
+  structured_output: json_schema
+  max_retries: 1
+
+tasks:
+  planner.interview: {model: planner, temperature: 0.4, max_tokens: 500}
+  planner.generate:  {model: planner, temperature: 0.4, max_tokens: 4000}
+  planner.revise:    {model: planner, temperature: 0.3, max_tokens: 2000}
+  coach.chat:        {model: coach, temperature: 0.7, max_tokens: 600}
+  coach.checkin:     {model: coach, temperature: 0.8, max_tokens: 250}
+  coach.extract:     {model: coach, temperature: 0.0, max_tokens: 600}
+  coach.summarize:   {model: coach, temperature: 0.2, max_tokens: 600}

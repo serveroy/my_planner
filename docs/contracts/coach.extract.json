@@ -1,0 +1,252 @@
+{
+  "task": "coach.extract",
+  "output_kind": "json",
+  "input_schema": {
+    "$defs": {
+      "ChatTurn": {
+        "properties": {
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatTurn",
+        "type": "object"
+      },
+      "ExtractMetric": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "default": "",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "ExtractMetric",
+        "type": "object"
+      },
+      "ExtractTask": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "due_today": {
+            "default": false,
+            "title": "Due Today",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "ExtractTask",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "today": {
+        "format": "date",
+        "title": "Today",
+        "type": "string"
+      },
+      "weekday": {
+        "enum": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ],
+        "title": "Weekday",
+        "type": "string"
+      },
+      "tasks": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/ExtractTask"
+        },
+        "title": "Tasks",
+        "type": "array"
+      },
+      "metrics": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/ExtractMetric"
+        },
+        "title": "Metrics",
+        "type": "array"
+      },
+      "recent_messages": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/ChatTurn"
+        },
+        "title": "Recent Messages",
+        "type": "array"
+      },
+      "message": {
+        "title": "Message",
+        "type": "string"
+      }
+    },
+    "required": [
+      "today",
+      "weekday",
+      "message"
+    ],
+    "title": "ExtractInput",
+    "type": "object"
+  },
+  "output_schema": {
+    "$defs": {
+      "ExtractedEvent": {
+        "properties": {
+          "type": {
+            "enum": [
+              "task_done",
+              "task_partial",
+              "task_skipped",
+              "metric_value",
+              "constraint",
+              "plan_change_request",
+              "mood",
+              "safety_concern"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Task Id"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Date"
+          },
+          "metric_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Metric Key"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          },
+          "mood": {
+            "anyOf": [
+              {
+                "enum": [
+                  "positive",
+                  "neutral",
+                  "tired",
+                  "stressed",
+                  "frustrated",
+                  "demotivated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Mood"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ExtractedEvent",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "events": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/ExtractedEvent"
+        },
+        "title": "Events",
+        "type": "array"
+      }
+    },
+    "title": "ExtractOutput",
+    "type": "object"
+  },
+  "system_prompt_template": "You analyze one message a user sent to their goal coach and extract structured events for the app. Use recent_messages only to resolve references (e.g. \"yes, I did it\" answering \"did you run today?\").\n\nEvent types:\n- task_done / task_partial / task_skipped: the user reports doing (or not doing) a plan task. task_id must be one of the given tasks; date is the absolute date (resolve \"yesterday\", weekdays, etc. from today).\n- metric_value: a measurement for one of the given metrics (metric_key, value as a number in the metric's unit).\n- constraint: a lasting change in availability or circumstances. text: short English paraphrase.\n- plan_change_request: the user explicitly wants their plan changed. text: short English paraphrase.\n- mood: the user's emotional state when clearly expressed.\n- safety_concern: self-harm, disordered eating, injury or medical red flags. text: short English paraphrase.\nOnly extract what the message actually says. No events is a valid answer.\n\nOutput: one JSON object only: {\"events\": [...]}"
+}
