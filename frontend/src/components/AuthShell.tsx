@@ -11,7 +11,7 @@ export function AuthShell({ title, children, footer, footerHref }: { title: stri
   const { t } = useI18n();
   const c = useColors();
   return (
-    <Screen>
+    <Screen safeTop>
       <View style={{ alignItems: 'flex-end' }}>
         <LanguageToggle />
       </View>

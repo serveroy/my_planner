@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "web", "--", "--port", "8081"],
       "port": 8081
+    },
+    {
+      "name": "ios",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "ios", "--", "--port", "8082"],
+      "port": 8082
     }
   ]
 }

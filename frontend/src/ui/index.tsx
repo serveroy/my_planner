@@ -42,11 +42,12 @@ export function AppText({
   );
 }
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+/** `safeTop`: keep clear of the status bar / Dynamic Island on screens without a header. */
+export function Screen({ children, scroll = true, safeTop }: { children: ReactNode; scroll?: boolean; safeTop?: boolean }) {
   const c = useColors();
   const inner = <View style={styles.inner}>{children}</View>;
   return (
-    <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView edges={safeTop ? ['top', 'bottom', 'left', 'right'] : ['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
       {scroll ? (
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           {inner}
